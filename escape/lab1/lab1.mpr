@@ -1,0 +1,5 @@
+[Microprogrammed Architecture Project]
+Microcode=lab1.mco
+InstructionMemory=lab1.cod
+DataMemory=random.dat
+MemoryAccessTime=1

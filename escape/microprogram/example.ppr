@@ -1,0 +1,7 @@
+[Pipelined Architecture Project]
+PipelineFunctionality=Example.pfu
+InstructionMemory=Example.cod
+DataMemory=Example.dat
+MemoryAccessTime=3
+Forwarding=yes
+DelaySlot=0

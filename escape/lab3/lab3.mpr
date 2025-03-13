@@ -1,0 +1,5 @@
+[Microprogrammed Architecture Project]
+Microcode=lab3.mco
+InstructionMemory=lab3.cod
+DataMemory=deadbeef.dat
+MemoryAccessTime=1
