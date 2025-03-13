@@ -176,22 +176,32 @@ Liczby traktowane są jako unsigned int.
 Wynik ma być zwracany w rejestrze R1.
 Zmierz czas działania programu przy MemAccTime = 1
 
-        ADDI R0, 0x0200, R3  ; Ustawienie R3 na początek tablicy (0x200)
-        ADDI R0, 0x03FE, R4  ; Ustawienie R4 na koniec tablicy (0x3FE)
+        ADDI R0, 0x0200, R3      ; Inicjalizacja wskaźnika
+        ADDI R0, 0x0000, R1      ; Zerowanie R1 (maksimum)
+        SUBI R3, 0x0002, R7      ; Cofnięcie wskaźnika o 2
+        LDH R6, 0x0200(R7)       ; Pobranie pierwszej wartości
+        ADD R1, R6, R1           ; Ustawienie początkowego maksimum
 
-        LDH R1, 0(R3)        ; Ładuje pierwszą wartość jako początkowe maksimum
-        ADDI R3, 2, R3       ; Przejście do następnego elementu
+loop:   SUBI R3, 0x0002, R3      ; Przejście do następnego elementu
+        LDH R4, 0x0200(R3)       ; Pobranie wartości
+        SUB R4, R1, R5           ; Porównanie z maksimum
+        BRNZ R3, chck            ; Jeśli nie koniec tablicy, sprawdź wartości
+        
+halt:   BRZ R0, halt             ; Koniec programu
 
-loop:   LDH R5, 0(R3)        ; Ładuje półsłowo z adresu R3 do rejestru R5
-        SUB R5, R1, R6       ; R6 = R5 - R1 (sprawdza czy R5 > R1)
-        BRLE R6, skip        ; Jeśli R6 <= 0 (czyli R5 <= R1), pomijamy aktualizację
-        ADD R0, R5, R1       ; Aktualizacja maksimum (R1 = R5)
+max:    ADDI R0, 0x0000, R1      ; Zerowanie R1
+        ADD R1, R4, R1           ; Aktualizacja maksimum
+        BRNZ R3, loop            ; Powrót do pętli
 
-skip:   ADDI R3, 2, R3       ; Przejście do następnego elementu (R3 = R3 + 2)
-        SUB R4, R3, R6       ; R6 = R4 - R3 (sprawdza czy R3 <= R4)
-        BRGE R6, loop        ; Jeśli R6 >= 0 (czyli R3 <= R4), kontynuuj pętlę
+chck:   BRGT R5, max             ; Jeśli większe niż maksimum, aktualizuj
+        BRNZ R3, loop            ; Powrót do pętli
 
-halt:   BRZ R0, halt         ; Nieskończona pętla - koniec programu
+
+
+
+
+
+
 
 ================================================================================
 2. Maksimum i minimum
@@ -199,31 +209,36 @@ Znaleźć maksymalną i minimalną wartość w tej samej tablicy.
 
 Wyniki w rejestrach R1, R2.
 
-        ADDI R0, 0x0200, R3  ; Ustawienie R3 na początek tablicy (0x200)
-        ADDI R0, 0x03FE, R4  ; Ustawienie R4 na koniec tablicy (0x3FE)
+0000: 44030200 |            | ADDI R0, 0x0200, R3
+0004: 44010000 |            | ADDI R0, 0x0000, R1
+0008: 44020000 |            | ADDI R0, 0x0000, R2
+000C: 48670002 |            | SUBI R3, 0x0002, R7
+0010: 08E60200 |            | LDH  R6, 0x0200(R7)
+0014: 1C260800 |            | ADD  R1, R6, R1
+0018: 1C461000 |            | ADD  R2, R6, R2
+001C: 48630002 | loop       | SUBI R3, 0x0002, R3
+0020: 08640200 |            | LDH  R4, 0x0200(R3)
+0024: 20812800 |            | SUB  R4, R1, R5
+0028: 20824000 |            | SUB  R4, R2, R8
+002C: 7805000C |            | BRGT R5, maxi
+0030: 8008000C |            | BRLT R8, mini
+0034: 7403FFE4 |            | BRNZ R3, loop
+0038: 70000020 |            | BRZ  R0, halt
+003C: 44010000 | maxi       | ADDI R0, 0x0000, R1
+0040: 1C240800 |            | ADD  R1, R4, R1
+0044: 7403FFD4 |            | BRNZ R3, loop
+0048: 44020000 | mini       | ADDI R0, 0x0000, R2
+004C: 1C441000 |            | ADD  R2, R4, R2
+0050: 7403FFC8 |            | BRNZ R3, loop
+0054: 7000FFFC | halt       | BRZ  R0, halt
+0058: 00000000 |            | NOP  
 
-        LDH R1, 0(R3)        ; Ładuje pierwszą wartość jako początkowe maksimum
-        ADD R0, R1, R2       ; Ustawia tę samą wartość jako początkowe minimum
-        ADDI R3, 2, R3       ; Przejście do następnego elementu
 
-loop:   LDH R5, 0(R3)        ; Ładuje półsłowo z adresu R3 do rejestru R5
 
-        ; Sprawdzenie maksimum
-        SUB R5, R1, R6       ; R6 = R5 - R1 (sprawdza czy R5 > R1)
-        BRLE R6, checkMin    ; Jeśli R6 <= 0 (czyli R5 <= R1), pomijamy aktualizację maksimum
-        ADD R0, R5, R1       ; Aktualizacja maksimum (R1 = R5)
 
-checkMin:
-        ; Sprawdzenie minimum
-        SUB R5, R2, R6       ; R6 = R5 - R2 (sprawdza czy R5 < R2)
-        BRGE R6, next        ; Jeśli R6 >= 0 (czyli R5 >= R2), pomijamy aktualizację minimum
-        ADD R0, R5, R2       ; Aktualizacja minimum (R2 = R5)
 
-next:   ADDI R3, 2, R3       ; Przejście do następnego elementu (R3 = R3 + 2)
-        SUB R4, R3, R6       ; R6 = R4 - R3 (sprawdza czy R3 <= R4)
-        BRGE R6, loop        ; Jeśli R6 >= 0 (czyli R3 <= R4), kontynuuj pętlę
 
-halt:   BRZ R0, halt         ; Nieskończona pętla - koniec programu
+
 
 ================================================================================
 3. Sortowanie przez wybieranie
