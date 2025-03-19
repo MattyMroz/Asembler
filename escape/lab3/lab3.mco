@@ -53,6 +53,15 @@
 0032 |BRLE  |S2    |      |B     |      |      |      |GT    |Fetch |      |      |      |      
 0033 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
 
+0034 |PUSH  |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+0035 |      |S1    |B     |      |MDR   |      |      |      |      |      |      |      |      
+0036 |      |      |      |      |      |      |      |Mbusy |PUSH  |WW    |MAR   |      |      
+0037 |      |SUB   |A     |Const |A     |      |4     |True  |Fetch |      |      |      |WF3   
+0038 |PULL  |ADD   |A     |Const |A     |      |4     |      |      |      |      |      |      
+0039 |      |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+003A |      |      |      |      |      |      |      |Mbusy |PULL  |RW    |MAR   |MDR   |      
+003B |      |S1    |MDR   |      |C     |      |      |True  |Fetch |      |      |      |WF3   
+
 [Jump Tables]
 ;Opcode  |Jump Table 1 |Jump Table 2 
 NOP      |Fetch        |             
@@ -89,4 +98,6 @@ BRGT     |BRGT         |
 BRGE     |BRGE         |             
 BRLT     |BRLT         |             
 BRLE     |BRLE         |             
+PUSH     |PUSH         |             
+PULL     |PULL         |             
 

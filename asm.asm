@@ -48,8 +48,10 @@ Inne:
 NOP             No Operation             |Brak operacji, nie wykonuje żadnej akcji
 LIH Rx,i        Load Immediate High:     |Ładuje górne 16 bitów rejestru Rx wartością stałą i
                 Rx[31..16] ← i.H         |
-
-
+LDH Rx,address  Load Halfword:           |Ładuje półsłowo (16 bitów) z pamięci spod adresu address do rejestru Rx
+                Rx ← MEM[address]        |
+LDW Rx,address  Load Word:               |Ładuje słowo (32 bity) z pamięci spod adresu address do rejestru Rx
+                Rx ← MEM[address]        |
 
 
 ================================================================================
@@ -176,69 +178,51 @@ Liczby traktowane są jako unsigned int.
 Wynik ma być zwracany w rejestrze R1.
 Zmierz czas działania programu przy MemAccTime = 1
 
-        ADDI R0, 0x0200, R3      ; Inicjalizacja wskaźnika
-        ADDI R0, 0x0000, R1      ; Zerowanie R1 (maksimum)
-        SUBI R3, 0x0002, R7      ; Cofnięcie wskaźnika o 2
-        LDH R6, 0x0200(R7)       ; Pobranie pierwszej wartości
-        ADD R1, R6, R1           ; Ustawienie początkowego maksimum
-
-loop:   SUBI R3, 0x0002, R3      ; Przejście do następnego elementu
-        LDH R4, 0x0200(R3)       ; Pobranie wartości
-        SUB R4, R1, R5           ; Porównanie z maksimum
-        BRNZ R3, chck            ; Jeśli nie koniec tablicy, sprawdź wartości
-        
-halt:   BRZ R0, halt             ; Koniec programu
-
-max:    ADDI R0, 0x0000, R1      ; Zerowanie R1
-        ADD R1, R4, R1           ; Aktualizacja maksimum
-        BRNZ R3, loop            ; Powrót do pętli
-
-chck:   BRGT R5, max             ; Jeśli większe niż maksimum, aktualizuj
-        BRNZ R3, loop            ; Powrót do pętli
-
-
-
-
-
-
-
-
 ================================================================================
 2. Maksimum i minimum
 Znaleźć maksymalną i minimalną wartość w tej samej tablicy.
 
 Wyniki w rejestrach R1, R2.
+0000: 44030200 |            | ADDI R0, 0x0200, R3        ; Inicjalizacja adresu końca tablicy
+0004: 48630002 |            | SUBI R3, 0x0002, R3        ; Ustawienie R3 na przedostatni element
+0008: 08640200 |            | LDH  R4, 0x0200(R3)        ; Odczyt pierwszego elementu
+000C: 1C040800 |            | ADD  R0, R4, R1            ; Inicjalizacja max pierwszym elementem
+0010: 1C041000 |            | ADD  R0, R4, R2            ; Inicjalizacja min pierwszym elementem
+0014: 48630002 | loop       | SUBI R3, 0x0002, R3        ; Przejście do kolejnego elementu
+0018: 08640200 |            | LDH  R4, 0x0200(R3)        ; Odczyt kolejnego elementu
+001C: 20812800 |            | SUB  R4, R1, R5            ; Sprawdzenie czy większy od max
+0020: 78050014 |            | BRGT R5, maxi              ; Jeśli R5 > 0, to nowy max
+0024: 20824000 |            | SUB  R4, R2, R6            ; Sprawdzenie czy mniejszy od min
+0028: 80060014 |            | BRLT R6, mini              ; Jeśli R6 < 0, to nowy min
+002C: 7403FFE4 |            | BRNZ R3, loop              ; Kontynuuj dopóki R3 != 0
+0030: 7000FFFC | halt       | BRZ  R0, halt              ; Koniec programu
+0034: 00000000 |            | NOP                        ; NOP dla breakpoint PC = 34
+0038: 1C040800 | maxi       | ADD  R0, R4, R1            ; Nowy max = R4
+003C: 7403FFD4 |            | BRNZ R3, loop              ; Powrót do pętli
+0040: 1C041000 | mini       | ADD  R0, R4, R2            ; Nowy min = R4
+0044: 7403FFCC |            | BRNZ R3, loop              ; Powrót do pętli
+
 
 0000: 44030200 |            | ADDI R0, 0x0200, R3
-0004: 44010000 |            | ADDI R0, 0x0000, R1
-0008: 44020000 |            | ADDI R0, 0x0000, R2
-000C: 48670002 |            | SUBI R3, 0x0002, R7
-0010: 08E60200 |            | LDH  R6, 0x0200(R7)
-0014: 1C260800 |            | ADD  R1, R6, R1
-0018: 1C461000 |            | ADD  R2, R6, R2
-001C: 48630002 | loop       | SUBI R3, 0x0002, R3
-0020: 08640200 |            | LDH  R4, 0x0200(R3)
-0024: 20812800 |            | SUB  R4, R1, R5
-0028: 20824000 |            | SUB  R4, R2, R8
-002C: 7805000C |            | BRGT R5, maxi
-0030: 8008000C |            | BRLT R8, mini
-0034: 7403FFE4 |            | BRNZ R3, loop
-0038: 70000020 |            | BRZ  R0, halt
-003C: 44010000 | maxi       | ADDI R0, 0x0000, R1
-0040: 1C240800 |            | ADD  R1, R4, R1
-0044: 7403FFD4 |            | BRNZ R3, loop
-0048: 44020000 | mini       | ADDI R0, 0x0000, R2
-004C: 1C441000 |            | ADD  R2, R4, R2
-0050: 7403FFC8 |            | BRNZ R3, loop
-0054: 7000FFFC | halt       | BRZ  R0, halt
-0058: 00000000 |            | NOP  
+0004: 48630002 |            | SUBI R3, 0x0002, R3
+0008: 08640200 |            | LDH  R4, 0x0200(R3)
+000C: 1C040800 |            | ADD  R0, R4, R1
+0010: 1C041000 |            | ADD  R0, R4, R2
+0014: 48630002 | loop       | SUBI R3, 0x0002, R3
+0018: 08640200 |            | LDH  R4, 0x0200(R3)
+001C: 20812800 |            | SUB  R4, R1, R5
+0020: 78050014 |            | BRGT R5, maxi
+0024: 20824000 |            | SUB  R4, R2, R6
+0028: 80060014 |            | BRLT R6, mini
+002C: 7403FFE4 |            | BRNZ R3, loop
+0030: 7000FFFC | halt       | BRZ  R0, halt
+0034: 00000000 |            | NOP
+0038: 1C040800 | maxi       | ADD  R0, R4, R1
+003C: 7403FFD4 |            | BRNZ R3, loop
+0040: 1C041000 | mini       | ADD  R0, R4, R2
+0044: 7403FFCC |            | BRNZ R3, loop
 
-
-
-
-
-
-
+7173 cykli
 
 ================================================================================
 3. Sortowanie przez wybieranie
@@ -266,44 +250,15 @@ zamiana liczb w tablicy: a[Rx] i b[Rmax]
 jeśli Rx=0 to koniec
 ================================================================================
 
-        ADDI R0, 0x0200, R1  ; Inicjalizacja R1 jako wskaźnik początku tablicy (0x200)
-        ADDI R0, 0x03FE, R2  ; Inicjalizacja R2 jako wskaźnik końca tablicy (0x3FE)
 
-main_loop:
-        ADD R0, R1, R3       ; Kopiowanie aktualnej pozycji do R3 (indeks elementu z min. wartością)
-        ADD R0, R1, R4       ; Kopiowanie aktualnej pozycji do R4 (iterator wewnętrznej pętli)
-        LDH R5, 0(R1)        ; Ładowanie wartości z aktualnej pozycji jako początkowe minimum
 
-inner_loop:
-        ADDI R4, 2, R4       ; Przejście do następnego elementu w wewnętrznej pętli
-        SUB R2, R4, R6       ; Sprawdzenie czy nie przekroczyliśmy końca tablicy
-        BRLT R6, swap        ; Jeśli R4 > R2, zakończ wewnętrzną pętlę
 
-        LDH R7, 0(R4)        ; Ładowanie wartości z pozycji R4
-        SUB R7, R5, R6       ; Porównanie z aktualnym minimum
-        BRGE R6, inner_loop  ; Jeśli R7 >= R5, kontynuuj pętlę
 
-        ; Znaleziono nowe minimum
-        ADD R0, R7, R5       ; Aktualizacja minimum
-        ADD R0, R4, R3       ; Zapamiętanie pozycji nowego minimum
-        BRZ R0, inner_loop   ; Kontynuuj wewnętrzną pętlę
 
-swap:
-        SUB R3, R1, R6       ; Sprawdzenie czy znaleziono nowe minimum
-        BRZ R6, next_iter    ; Jeśli nie znaleziono nowego minimum, przejdź do następnej iteracji
 
-        ; Zamiana miejscami wartości
-        LDH R7, 0(R1)        ; Ładowanie wartości z pozycji R1
-        LDH R8, 0(R3)        ; Ładowanie wartości z pozycji R3
-        STH R8, 0(R1)        ; Zapisanie wartości z R3 do pozycji R1
-        STH R7, 0(R3)        ; Zapisanie wartości z R1 do pozycji R3
 
-next_iter:
-        ADDI R1, 2, R1       ; Przejście do następnego elementu w głównej pętli
-        SUB R2, R1, R6       ; Sprawdzenie czy nie przekroczyliśmy końca tablicy
-        BRGE R6, main_loop   ; Jeśli R1 <= R2, kontynuuj główną pętlę
 
-halt:   BRZ R0, halt         ; Nieskończona pętla - koniec programu
+
 
 ================================================================================
 ================================================================================
@@ -319,3 +274,204 @@ Pierwszy i ostatni element tablicy
         LDH R2, 0x0000(R4)   ; Ładuje półsłowo z adresu 0x03FE do rejestru R2
 
 halt:   BRZ R0, halt         ; Nieskończona pętla - koniec programu
+
+
+
+================================================================================
+================================================================================
+Lab 3
+================================================================================
+# Instrukcje PUSH i PULL - implementacja w mikrokodzie
+
+## Ogólne informacje:
+- Zaimplementować instrukcje operujące na stosie:
+  * PUSH – zapisanie (odłożenie) słowa na stosie
+  * PULL – odczytanie (zdjęcie) słowa ze stosu
+
+- Pliki znajdują się w katalogu lab3.
+  * wczytać konfigurację: lab3.ecf
+  * wczytać projekt: lab3.mpr
+
+## Organizacja stosu (LIFO):
+- wskaźnik stosu (SP – Stack Pointer) wskazuje pierwsze wolne miejsce na stosie (nad wierzchołkiem - top)
+- stos rośnie w kierunku malejących adresów
+- wskaźnik stosu jest inicjowany wartością 0x3FC
+- wskaźnik stosu jest dowolnym rejestrem R1 – R31
+================================================================================
+## Implementacja instrukcji:
+
+### 1️⃣ PUSH Rx, Ry
+add data Ry to the stack Rx
+1) Ry → Mem[Rx]
+   Rx → MAR
+   Ry → MDR
+   write memory (WW,MAR)
+2) Rx-4 → Rx
+
+================================================================================
+### 2️⃣ PULL Rx, Ry
+remove data from the stack
+1) Rx+4 → Rx
+2) Mem[Rx] → Ry
+   Rx → MAR
+   read memory (RW,MAR,MDR)
+   MDR → Ry
+
+Na obrazku widoczny jest także diagram pokazujący strukturę stosu z adresami pamięci (0x0000, 0x0200, 0x03FF, 0x0400) oraz wskaźnikiem stosu SP.
+
+================================================================================
+# Testowanie instrukcji PUSH – PULL
+
+Sprawdzić (clock-by-clock) działanie instrukcji PUSH/PULL za pomocą programu:
+
+```
+ADDI R0, 0x????, R7
+ADDI R0, 0xABCD, R1
+PUSH R7,R1
+PULL R7,R2
+```
+
+## 3️⃣ Wykonać program wykorzystujący instrukcje PUSH/PULL według przykładu.
+Zmierz czas działania programu i sprawdź wynik w R2 (0x2040)
+
+```
+0000: 44070400 |             | ADDI R0, 0x????, R7
+0004: 44010080 |             | ADDI R0, 0x0080, R1
+0008: 88E10000 | next        | PUSH R7,R1                 ┐
+000C: 48210001 |             | SUBI R1, 0x0001, R1        │ odłożenie na stos
+0010: 7801FFF4 |             | BRGT R1, next              │ 128 słów o wartościach
+0014: 00000000 |             | NOP                        ┘ od 0x0080 do 0x0001
+0018: 34421000 |             | XOR  R2, R2, R2
+001C: 44010080 |             | ADDI R0, 0x0080, R1
+0020: 8CE30000 | next2       | PULL R7,R3                 ┐
+0024: 1C621000 |             | ADD  R3, R2, R2            │ zdjęcie ze stosu
+0028: 48210001 |             | SUBI R1, 0x0001, R1        │ 128 słów i sumowanie
+002C: 7801FFF0 |             | BRGT R1, next2             │ ich w rejestrze R2
+0030: 00000000 |             | NOP                        ┘
+0034: 7000FFFC | halt        | BRZ  R0, halt
+```
+
+
+
+
+
+0000: 440703FC |            | ADDI R0, 0x03FC, R7
+0004: 44010080 |            | ADDI R0, 0x0080, R1
+0008: 88E10000 | next       | PUSH R7,R1
+000C: 48210001 |            | SUBI R1, 0x0001, R1
+0010: 7801FFF4 |            | BRGT R1, next
+0014: 00000000 |            | NOP
+0018: 34421000 |            | XOR  R2, R2, R2
+001C: 44010080 |            | ADDI R0, 0x0080, R1
+0020: 8CE30000 | next2      | PULL R7,R3
+0024: 1C621000 |            | ADD  R3, R2, R2
+0028: 48210001 |            | SUBI R1, 0x0001, R1
+002C: 7801FFF0 |            | BRGT R1, next2
+0030: 00000000 |            | NOP
+0034: 7000FFFC | halt       | BRZ  R0, halt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+PROMPT:
+# Zasady pisania kodu asemblerowego
+
+## Format instrukcji
+```
+OPCODE Rx,Ry,Rz   lub   OPCODE Rx,i,Ry
+```
+
+## Instrukcje arytmetyczne
+- `ADD  Rx,Ry,Rz`    - Dodaje wartości z rejestrów Rx i Ry: Rz ← Rx+Ry
+- `SUB  Rx,Ry,Rz`    - Odejmuje wartość Ry od Rx: Rz ← Rx-Ry
+- `MUL  Rx,Ry,Rz`    - Mnoży wartości z rejestrów Rx i Ry: Rz ← Rx*Ry
+- `DIV  Rx,Ry,Rz`    - Dzieli wartość Rx przez Ry: Rz ← Rx/Ry
+
+## Instrukcje arytmetyczne ze stałymi
+- `ADDI Rx,i,Ry`     - Dodaje wartość stałą i do rejestru Rx: Ry ← Rx+i
+- `SUBI Rx,i,Ry`     - Odejmuje wartość stałą i od rejestru Rx: Ry ← Rx-i
+- `MULI Rx,i,Ry`     - Mnoży rejestr Rx przez wartość stałą i: Ry ← Rx*i
+- `DIVI Rx,i,Ry`     - Dzieli rejestr Rx przez wartość stałą i: Ry ← Rx/i
+
+## Instrukcje logiczne
+- `AND  Rx,Ry,Rz`    - Operacja logiczna AND: Rz ← Rx&Ry
+- `OR   Rx,Ry,Rz`    - Operacja logiczna OR: Rz ← Rx|Ry
+- `XOR  Rx,Ry,Rz`    - Operacja logiczna XOR: Rz ← Rx^Ry
+
+## Instrukcje przesunięcia
+- `SLL  Rx,Ry,Rz`    - Przesunięcie w lewo: Rz ← Rx<<Ry
+- `SRL  Rx,Ry,Rz`    - Przesunięcie logiczne w prawo: Rz ← Rx>>Ry
+- `SRA  Rx,Ry,Rz`    - Przesunięcie arytmetyczne w prawo: Rz ← Rx>>Ry z zachowaniem znaku
+
+## Instrukcje skoku
+- `BRZ  Rx,label`    - Skok do etykiety label, jeśli Rx == 0
+- `BRNZ Rx,label`    - Skok do etykiety label, jeśli Rx != 0
+- `BRGT Rx,label`    - Skok do etykiety label, jeśli Rx > 0
+- `BRGE Rx,label`    - Skok do etykiety label, jeśli Rx >= 0
+- `BRLT Rx,label`    - Skok do etykiety label, jeśli Rx < 0
+- `BRLE Rx,label`    - Skok do etykiety label, jeśli Rx <= 0
+
+## Instrukcje pamięci
+- `LDH  Rx,offset(Ry)` - Ładuje półsłowo (16 bitów) z pamięci: Rx ← MEM[Ry+offset]
+- `LDW  Rx,offset(Ry)` - Ładuje słowo (32 bity) z pamięci: Rx ← MEM[Ry+offset]
+- `STH  Rx,offset(Ry)` - Zapisuje półsłowo do pamięci: MEM[Ry+offset] ← Rx
+
+## Inne instrukcje
+- `NOP`              - Brak operacji
+- `LIH  Rx,i`        - Ładuje górne 16 bitów rejestru Rx
+
+## Konwencje i ważne uwagi
+- W asemblerze iterujemy OD TYŁU! - iteruj dokłądnie tak jak w przykładzie, nie potrzeby jest koniec tablicy przypisany do zmiennej
+- Po instrukcji HALT dodajemy NOP, aby wstawić breakpoint
+- Format kodu: `adres: kod | etykieta | instrukcja (bez komentarzów)`
+- Etykiety definiujemy bez _ w nazwie, użwaj podejścia camelCase i pisz po angieslku
+- Liczby szesnastkowe zapisujemy z prefiksem 0x
+- R0 - to nasze 0 nie zmieniamy jego wartości
+- nie pisz komentarzy ; NIE PISZ komentarzy
+- nie dodwaj \n - pustych linii
+Przykłąd poprawnego kodu znajdującego max i min:
+```
+0000: 44030200 |            | ADDI R0, 0x0200, R3
+0004: 48630002 |            | SUBI R3, 0x0002, R3
+0008: 08640200 |            | LDH  R4, 0x0200(R3)
+000C: 1C040800 |            | ADD  R0, R4, R1
+0010: 1C041000 |            | ADD  R0, R4, R2
+0014: 48630002 | loop       | SUBI R3, 0x0002, R3
+0018: 08640200 |            | LDH  R4, 0x0200(R3)
+001C: 20812800 |            | SUB  R4, R1, R5
+0020: 78050014 |            | BRGT R5, maxi
+0024: 20824000 |            | SUB  R4, R2, R6
+0028: 80060014 |            | BRLT R6, mini
+002C: 7403FFE4 |            | BRNZ R3, loop
+0030: 7000FFFC | halt       | BRZ  R0, halt
+0034: 00000000 |            | NOP
+0038: 1C040800 | maxi       | ADD  R0, R4, R1
+003C: 7403FFD4 |            | BRNZ R3, loop
+0040: 1C041000 | mini       | ADD  R0, R4, R2
+0044: 7403FFCC |            | BRNZ R3, loop
+```
+Twoim zadaniem jest napisać kod dla zadania, wzorując się na poprawym kodzie:
+
+
+

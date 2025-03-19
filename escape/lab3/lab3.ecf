@@ -46,6 +46,8 @@ BRGT     | I  |r2, j
 BRGE     | I  |r2, j
 BRLT     | I  |r2, j
 BRLE     | I  |r2, j
+PUSH     | R  |r1, r2
+PULL     | R  |r1, r2
 
 [Microprogrammed Architecture]
 MicroCodeSize=256
