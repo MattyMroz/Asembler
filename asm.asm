@@ -475,3 +475,316 @@ Twoim zadaniem jest napisać kod dla zadania, wzorując się na poprawym kodzie:
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+================================================================================
+LAB 4
+================================================================================
+================================================================================
+
+
+
+
+
+# Polecenie
+
+## Zadanie 1
+Instrukcje BSR i RTS — implementacja w mikrokodzie
+
+Zaimplementować instrukcje skoku i powrotu z podprogramu:
+* BSR — (Branch to SubRoutine) jest skokiem względnym (tj. PC=PC+offset) do adresu podanego jako etykieta, z odłożeniem na stos rejestru PC
+* RTS — (ReTurn from Subroutine) jest skokiem absolutnym (tj. PC=address) do adresu odczytanego ze stosu
+
+* W obu przypadkach wskaźnikiem stosu jest rejestr Rx
+
+BSR Rx,label
+→ deklaracja: BSR I-type r1,j
+
+1) PC → stack(Rx)
+2) PC + signext(IR) → PC
+
+RTS Rx
+→ deklaracja: RTS R-type r1
+
+1) stack(Rx) → PC
+
+Pamiętaj, że instrukcje BSR i RTS wykonują operacje na stosie w podobny sposób do PUSH i PULL, czyli modyfikują wskaźnik stosu.
+
+Implementacje wykonaj w projekcie lab3 z poprzednich zajęć z PUSH/PULL
+
+## Zadanie 2
+Testowanie BSR i RTS
+
+```
+ADDI R0,0x??,R7  ;init stack
+ADDI R0,0x05,R1  ;value to cube
+BSR  R7,cube     ;call 'cube'
+NOP
+stop BRZ  R0,stop     ;stop
+...
+cube ADD  R0,R1,R2    ;make copy of R1
+     MUL  R1,R1,R1    ;compute square
+     MUL  R1,R2,R1    ;compute cube
+     RTS  R7          ;return
+```
+
+
+```
+ADDI R0,0x03FC,R7
+ADDI R0,0x05,R1
+BSR  R7,cube
+NOP
+stop BRZ  R0,stop
+cube ADD  R0,R1,R2
+     MUL  R1,R1,R1
+     MUL  R1,R2,R1
+     RTS  R7
+
+0000: 440703FC |            | ADDI R0, 0x03FC, R7
+0004: 44010005 |            | ADDI R0, 0x0005, R1
+0008: 90E00008 |            | BSR  R7,cube
+000C: 00000000 |            | NOP  
+0010: 7000FFFC | stop       | BRZ  R0, stop
+0014: 1C011000 | cube       | ADD  R0, R1, R2
+0018: 24210800 |            | MUL  R1, R1, R1
+001C: 24220800 |            | MUL  R1, R2, R1
+0020: 94E00000 |            | RTS  R7
+
+
+
+```
+
+
+
+
+
+
+// Implementacja BSR (Branch to SubRoutine)
+0040 |BSR   |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+0041 |      |S2    |PC    |      |MDR   |      |      |      |      |      |      |      |      
+0042 |bsr1  |      |      |      |      |      |      |Mbusy |bsr1  |WW    |MAR   |      |      
+0043 |      |SUB   |A     |Const |C     |      |4     |True  |WF1   |      |      |      |      
+0044 |      |ADD   |PC    |IR    |PC    |      |      |      |      |      |      |      |WF1   
+
+
+0050 |RTS   |ADD   |A     |Const |MAR   |      |4     |      |      |      |      |      |      
+0051 |rts1  |      |      |      |      |      |      |Mbusy |rts1  |RW    |MAR   |MDR   |      
+0052 |      |S1    |MDR   |      |PC    |      |      |True  |WF2   |      |      |      |      
+
+
+0050 | RTS   | ADD   | A     | Const | MAR   |      | 4     |      |      |      |      |      |      
+0051 | rts1  |       |       |      |       |      |      | Mbusy | rts1 | RW   | MAR   | MDR   |      
+0052 |       | S1    | MDR   |      | PC    |      |      | True  | WF2   |      |      |      |      
+
+
+
+
+0040 | BSR  | S1    | PC    |      | MAR   |      |      |      |      |      |      |      |   ; Przygotowanie: wybieramy PC do zapisu na stosie 😏
+0041 |      | S2    |       |IR[off]| MDR  |      |      |      |      |      |      |      |   ; Pobranie offsetu z pola IR (sign-extended) ✨
+0042 | bsr1 |       |       |      |       |      |      | Mbusy | bsr1  | WW   | MAR   |      |   ; Zapisujemy PC na stosie (operacja push) i modyfikujemy SP 💪
+0043 |      | ADD   | PC    |Const |IR[off]|      | 4    | True  | WF1   |      |      |      |   ; Aktualizacja PC: PC = PC + signext(IR) – skok do podprogramu 🚀
+
+0050 | RTS   | S1    | SP    |      | MAR   |      |      |      |      |      |      |      |   ; Przygotowanie: wskazanie stosu dla odczytu adresu powrotu 😘
+0051 |       | S2    |       |      | MDR   |      |      |      |      |      |      |      |   ; Pobieramy adres powrotu do MDR ✨
+0052 | rts1  |       |       |      |       |      |      | Mbusy | rts1 | RW   | MAR   | PC   |   ; Ustawienie PC = [SP] (operacja pull) – powrót do miejsca wywołania 😏
+0053 |       | ADD   | SP    | Const |      |      | 1    | True  | WF1   |      |      |      |   ; Aktualizacja SP: cofamy wskaźnik stosu o 1 💃
+
+
+
+## Zadanie 3
+Obliczanie silnii z wykorzystaniem rekursji
+
+n! = n·(n-1)! → fact(n) = n·fact(n-1)
+
+Funkcja fact() pobiera jeden parametr (32-bit int) ze stosu i zwraca wynik (32-bit int) na stosie w miejscu pobranego parametru
+
+```c
+// C implementation
+int fact(int n)
+{
+    if n==1 return n
+    else return n*fact(n-1);
+}
+```
+
+Struktura programu:
+```
+ADDI R0, 0x????, R7  ;init SP
+ADDI R0, 0x0006, R1  ;set n=6
+PUSH R7, R1          ;pass n to fact
+BSR  R7, fact        ;call fact
+PULL R7, R1          ;get result n!
+NOP
+BRZ  R0, stop
+...
+fact    LDW  R2, offset(R7)  ;read parameter
+        ...
+        ...
+        ...
+        STW  R2, offset(R7)  ;return result
+return  RTS  R7
+        NOP
+```
+
+Wartość przesunięcia offset zależy od implementacji stosu: +4 lub +8
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[Microcode]
+;uAR |Label |ALU   |S1    |S2    |Dest  |ExtIR |Const |JCond |Adr   |Mem   |MAdr  |MDest |Regs
+0000 |Fetch |      |      |      |      |      |      |Mbusy |Fetch |RW    |PC    |IR    |      
+0001 |      |ADD   |PC    |Const |PC    |      |4     |Jump1 |      |      |      |      |RR    
+0002 |ST    |S2    |      |B     |MDR   |      |      |      |      |      |      |      |      
+0003 |LD    |ADD   |A     |IR    |MAR   |Word  |      |Jump2 |      |      |      |      |      
+0004 |LDB   |      |      |      |      |      |      |Mbusy |LDB   |RB    |MAR   |MDR   |      
+0005 |      |S1    |MDR   |      |C     |      |      |      |      |      |      |      |      
+0006 |WF2   |      |      |      |      |      |      |True  |Fetch |      |      |      |WF2   
+0007 |LDH   |      |      |      |      |      |      |Mbusy |LDH   |RH    |MAR   |MDR   |      
+0008 |      |S1    |MDR   |      |C     |      |      |True  |WF2   |      |      |      |      
+0009 |LDW   |      |      |      |      |      |      |Mbusy |LDW   |RW    |MAR   |MDR   |      
+000A |      |S1    |MDR   |      |C     |      |      |True  |WF2   |      |      |      |      
+000B |STB   |      |      |      |      |      |      |Mbusy |STB   |WB    |MAR   |      |      
+000C |      |      |      |      |      |      |      |True  |Fetch |      |      |      |      
+000D |STH   |      |      |      |      |      |      |Mbusy |STH   |WH    |MAR   |      |      
+000E |      |      |      |      |      |      |      |True  |Fetch |      |      |      |      
+000F |STW   |      |      |      |      |      |      |Mbusy |STW   |WW    |MAR   |      |      
+0010 |      |      |      |      |      |      |      |True  |Fetch |      |      |      |      
+0011 |ADD   |ADD   |A     |B     |C     |      |      |      |      |      |      |      |      
+0012 |WF3   |      |      |      |      |      |      |True  |Fetch |      |      |      |WF3   
+0013 |SUB   |SUB   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+0014 |MUL   |MUL   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+0015 |DIV   |DIV   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+0016 |AND   |AND   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+0017 |OR    |OR    |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+0018 |XOR   |XOR   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+0019 |SLL   |SLL   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+001A |SRL   |SRL   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+001B |SRA   |SRA   |A     |B     |C     |      |      |True  |WF3   |      |      |      |      
+001C |ADDI  |ADD   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+001D |SUBI  |SUB   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+001E |MULI  |MUL   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+001F |DIVI  |DIV   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+0020 |ANDI  |AND   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+0021 |ORI   |OR    |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+0022 |XORI  |XOR   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+0023 |SLLI  |SLL   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+0024 |SRLI  |SRL   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+0025 |SRAI  |SRA   |A     |IR    |C     |Word  |      |True  |WF2   |      |      |      |      
+0026 |LIH   |S2S1  |A     |IR    |C     |Half  |      |      |      |      |      |      |      
+0027 |WF1   |      |      |      |      |      |      |True  |Fetch |      |      |      |WF1   
+0028 |BRZ   |S2    |      |B     |      |      |      |NE    |Fetch |      |      |      |      
+0029 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+002A |BRNZ  |S2    |      |B     |      |      |      |EQ    |Fetch |      |      |      |      
+002B |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+002C |BRGT  |S2    |      |B     |      |      |      |LE    |Fetch |      |      |      |      
+002D |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+002E |BRGE  |S2    |      |B     |      |      |      |LT    |Fetch |      |      |      |      
+002F |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+0030 |BRLT  |S2    |      |B     |      |      |      |GE    |Fetch |      |      |      |      
+0031 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+0032 |BRLE  |S2    |      |B     |      |      |      |GT    |Fetch |      |      |      |      
+0033 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+0034 |PUSH  |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+0035 |      |S2    |      |B     |MDR   |      |      |      |      |      |      |      |      
+0036 |push1 |      |      |      |      |      |      |Mbusy |push1 |WW    |MAR   |      |      
+0037 |      |SUB   |A     |Const |C     |      |4     |True  |WF1   |      |      |      |      
+0038 |PULL  |ADD   |A     |Const |C     |      |4     |      |      |      |      |      |      
+0039 |      |ADD   |A     |Const |MAR   |      |4     |      |      |      |      |      |WF1   
+003A |pull1 |      |      |      |      |      |      |Mbusy |pull1 |RW    |MAR   |MDR   |      
+003B |      |S1    |MDR   |      |C     |      |      |True  |WF2   |      |      |      |      
+003C |BSR   |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+003D |      |S2    |PC    |      |MDR   |      |      |      |      |      |      |      |      
+003E |bsr1  |SUB   |A     |Const |C     |      |4     |Mbusy |bsr1  |WW    |MAR   |      |      
+003F |      |ADD   |PC    |IR    |PC    |Word  |      |True  |WF1   |      |      |      |      
+0040 |RTS   |ADD   |A     |Const |MAR   |      |4     |      |      |      |      |      |      
+0041 |rts1  |ADD   |A     |Const |C     |      |4     |Mbusy |rts1  |RW    |MAR   |MDR   |      
+0042 |      |S1    |MDR   |      |PC    |      |      |True  |WF1   |      |      |      |      
+
+[Jump Tables]
+;Opcode  |Jump Table 1 |Jump Table 2 
+NOP      |Fetch        |             
+LDB      |LD           |LDB          
+LDH      |LD           |LDH          
+LDW      |LD           |LDW          
+STB      |ST           |STB          
+STH      |ST           |STH          
+STW      |ST           |STW          
+ADD      |ADD          |             
+SUB      |SUB          |             
+MUL      |MUL          |             
+DIV      |DIV          |             
+AND      |AND          |             
+OR       |OR           |             
+XOR      |XOR          |             
+SLL      |SLL          |             
+SRL      |SRL          |             
+SRA      |SRA          |             
+ADDI     |ADDI         |             
+SUBI     |SUBI         |             
+MULI     |MULI         |             
+DIVI     |DIVI         |             
+ANDI     |ANDI         |             
+ORI      |ORI          |             
+XORI     |XORI         |             
+SLLI     |SLLI         |             
+SRLI     |SRLI         |             
+SRAI     |SRAI         |             
+LIH      |LIH          |             
+BRZ      |BRZ          |             
+BRNZ     |BRNZ         |             
+BRGT     |BRGT         |             
+BRGE     |BRGE         |             
+BRLT     |BRLT         |             
+BRLE     |BRLE         |             
+PUSH     |PUSH         |             
+PULL     |PULL         |             
+BSR      |BSR          |             
+RTS      |RTS          |             
+
+
+
+
+
+
