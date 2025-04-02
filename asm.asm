@@ -615,10 +615,10 @@ Wartość przesunięcia offset zależy od implementacji stosu: +4 lub +8
 
 
         ADDI R0, 0x0FFC, R7
-        ADDI R0, 6, r1
+        ADDI R0, 6, R1
         PUSH R7, R1
         BSR  R7, fact
-        PULL R7, r1
+        PULL R7, R1
         NOP
 stop:
         BRZ  R0, stop
@@ -637,18 +637,15 @@ recursiveCase:
         PULL R7, R2
         MUL  R2, R3, R2
         STW  R2, 4(R7)
-        JMP  return
+        BRZ  R0, returnSeq
 
 baseCase:
         ADDI R0, 1, R2
         STW  R2, 4(R7)
 
-return:
+returnSeq:
         RTS  R7
         NOP
-
-
-
 
 
 
