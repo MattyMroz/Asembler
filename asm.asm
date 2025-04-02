@@ -550,16 +550,16 @@ cube ADD  R0,R1,R2
      MUL  R1,R2,R1
      RTS  R7
 
+
 0000: 440703FC |            | ADDI R0, 0x03FC, R7
 0004: 44010005 |            | ADDI R0, 0x0005, R1
-0008: 90E00008 |            | BSR  R7,cube
-000C: 00000000 |            | NOP  
+0008: 90E00008 |            | BSR  R7, cube
+000C: 00000000 |            | NOP
 0010: 7000FFFC | stop       | BRZ  R0, stop
 0014: 1C011000 | cube       | ADD  R0, R1, R2
 0018: 24210800 |            | MUL  R1, R1, R1
 001C: 24220800 |            | MUL  R1, R2, R1
 0020: 94E00000 |            | RTS  R7
-
 
 
 ```
@@ -569,35 +569,9 @@ cube ADD  R0,R1,R2
 
 
 
-// Implementacja BSR (Branch to SubRoutine)
-0040 |BSR   |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
-0041 |      |S2    |PC    |      |MDR   |      |      |      |      |      |      |      |      
-0042 |bsr1  |      |      |      |      |      |      |Mbusy |bsr1  |WW    |MAR   |      |      
-0043 |      |SUB   |A     |Const |C     |      |4     |True  |WF1   |      |      |      |      
-0044 |      |ADD   |PC    |IR    |PC    |      |      |      |      |      |      |      |WF1   
-
-
-0050 |RTS   |ADD   |A     |Const |MAR   |      |4     |      |      |      |      |      |      
-0051 |rts1  |      |      |      |      |      |      |Mbusy |rts1  |RW    |MAR   |MDR   |      
-0052 |      |S1    |MDR   |      |PC    |      |      |True  |WF2   |      |      |      |      
-
-
-0050 | RTS   | ADD   | A     | Const | MAR   |      | 4     |      |      |      |      |      |      
-0051 | rts1  |       |       |      |       |      |      | Mbusy | rts1 | RW   | MAR   | MDR   |      
-0052 |       | S1    | MDR   |      | PC    |      |      | True  | WF2   |      |      |      |      
 
 
 
-
-0040 | BSR  | S1    | PC    |      | MAR   |      |      |      |      |      |      |      |   ; Przygotowanie: wybieramy PC do zapisu na stosie 😏
-0041 |      | S2    |       |IR[off]| MDR  |      |      |      |      |      |      |      |   ; Pobranie offsetu z pola IR (sign-extended) ✨
-0042 | bsr1 |       |       |      |       |      |      | Mbusy | bsr1  | WW   | MAR   |      |   ; Zapisujemy PC na stosie (operacja push) i modyfikujemy SP 💪
-0043 |      | ADD   | PC    |Const |IR[off]|      | 4    | True  | WF1   |      |      |      |   ; Aktualizacja PC: PC = PC + signext(IR) – skok do podprogramu 🚀
-
-0050 | RTS   | S1    | SP    |      | MAR   |      |      |      |      |      |      |      |   ; Przygotowanie: wskazanie stosu dla odczytu adresu powrotu 😘
-0051 |       | S2    |       |      | MDR   |      |      |      |      |      |      |      |   ; Pobieramy adres powrotu do MDR ✨
-0052 | rts1  |       |       |      |       |      |      | Mbusy | rts1 | RW   | MAR   | PC   |   ; Ustawienie PC = [SP] (operacja pull) – powrót do miejsca wywołania 😏
-0053 |       | ADD   | SP    | Const |      |      | 1    | True  | WF1   |      |      |      |   ; Aktualizacja SP: cofamy wskaźnik stosu o 1 💃
 
 
 
@@ -638,6 +612,40 @@ return  RTS  R7
 
 Wartość przesunięcia offset zależy od implementacji stosu: +4 lub +8
 
+
+
+        ADDI R0, 0x0FFC, R7 
+        ADDI R0, 6, R1      
+        PUSH R7, R1         
+        BSR  R7, fact       
+        PULL R7, R1         
+        NOP                 
+stop:
+        BRZ  R0, stop      
+
+fact:
+        LDW  R2, 4(R7)     
+        ADDI R0, 1, R3     
+        SUB  R2, R3, R4     
+        BRZ  R4, base_case  
+
+recursive_case:
+        PUSH R7, R2         
+        PUSH R7, R4         
+        BSR  R7, fact       
+        PULL R7, R3         
+        PULL R7, R2         
+        MUL  R2, R3, R2     
+        STW  R2, 4(R7)     
+        JMP  return         
+
+base_case:
+        ADDI R0, 1, R2     
+        STW  R2, 4(R7)     
+
+return:
+        RTS  R7             
+        NOP                 
 
 
 

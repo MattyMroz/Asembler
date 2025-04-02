@@ -52,6 +52,21 @@
 0031 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
 0032 |BRLE  |S2    |      |B     |      |      |      |GT    |Fetch |      |      |      |      
 0033 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+0034 |PUSH  |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+0035 |      |S2    |      |B     |MDR   |      |      |      |      |      |      |      |      
+0036 |Load  |      |      |      |      |      |      |Mbusy |Load  |WW    |MAR   |      |      
+0037 |      |SUB   |A     |Const |C     |      |4     |True  |WF1   |      |      |      |WF1   
+0038 |PULL  |ADD   |A     |Const |C     |      |4     |      |      |      |      |      |      
+0039 |      |ADD   |A     |Const |MAR   |      |4     |      |      |      |      |      |WF1   
+003A |Write |      |      |      |      |      |      |Mbusy |Write |RW    |MAR   |MDR   |      
+003B |      |S1    |MDR   |      |C     |      |      |True  |WF2   |      |      |      |WF1   
+003C |BSR   |SUB   |A     |Const |MAR   |      |4     |      |      |      |      |      |      
+003D |      |S1    |PC    |      |MDR   |      |      |      |      |      |      |      |      
+003E |bsr1  |SUB   |A     |Const |C     |      |4     |Mbusy |bsr1  |WW    |MAR   |      |      
+003F |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |WF1   
+0040 |RTS   |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+0041 |rts1  |ADD   |A     |Const |C     |      |4     |Mbusy |rts1  |RW    |MAR   |MDR   |      
+0042 |      |S1    |MDR   |      |PC    |      |      |True  |Fetch |      |      |      |WF1   
 
 [Jump Tables]
 ;Opcode  |Jump Table 1 |Jump Table 2 
@@ -91,6 +106,6 @@ BRLT     |BRLT         |
 BRLE     |BRLE         |             
 PUSH     |PUSH         |             
 PULL     |PULL         |             
-BRS      |BRS          |             
+BSR      |BSR          |             
 RTS      |RTS          |             
 

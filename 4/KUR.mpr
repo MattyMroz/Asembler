@@ -1,0 +1,5 @@
+[Microprogrammed Architecture Project]
+Microcode=moze.mco
+InstructionMemory=TEST.cod
+DataMemory=KUR.dat
+MemoryAccessTime=4

@@ -52,6 +52,21 @@
 0031 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
 0032 |BRLE  |S2    |      |B     |      |      |      |GT    |Fetch |      |      |      |      
 0033 |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |      
+0034 |PUSH  |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+0035 |      |S2    |      |B     |MDR   |      |      |      |      |      |      |      |      
+0036 |Load  |      |      |      |      |      |      |Mbusy |Load  |WW    |MAR   |      |      
+0037 |      |SUB   |A     |Const |C     |      |4     |True  |WF1   |      |      |      |WF1   
+0038 |PULL  |ADD   |A     |Const |C     |      |4     |      |      |      |      |      |      
+0039 |      |ADD   |A     |Const |MAR   |      |4     |      |      |      |      |      |WF1   
+003A |Write |      |      |      |      |      |      |Mbusy |Write |RW    |MAR   |MDR   |      
+003B |      |S1    |MDR   |      |C     |      |      |True  |WF2   |      |      |      |WF1   
+003C |BSR   |SUB   |A     |Const |MAR   |      |4     |      |      |      |      |      |      
+003D |      |S1    |PC    |      |MDR   |      |      |      |      |      |      |      |      
+003E |bsr1  |SUB   |A     |Const |C     |      |4     |Mbusy |bsr1  |WW    |MAR   |      |      
+003F |      |ADD   |PC    |IR    |PC    |Word  |      |True  |Fetch |      |      |      |WF1   
+0040 |RTS   |S1    |A     |      |MAR   |      |      |      |      |      |      |      |      
+0041 |rts1  |ADD   |A     |Const |C     |      |4     |Mbusy |rts1  |RW    |MAR   |MDR   |      
+0042 |      |S1    |MDR   |      |PC    |      |      |True  |Fetch |      |      |      |WF1   
 
 [Jump Tables]
 ;Opcode  |Jump Table 1 |Jump Table 2 
@@ -91,6 +106,37 @@ BRLT     |BRLT         |
 BRLE     |BRLE         |             
 PUSH     |PUSH         |             
 PULL     |PULL         |             
-BRS      |BRS          |             
+BSR      |BSR          |             
 RTS      |RTS          |             
 
+
+
+[Microcode]
+;uAR |Label |ALU   |S1    |S2    |Dest  |ExtIR |Const |JCond |Adr   |Mem   |MAdr  |MDest |Regs
+
+uAR     - Numer (adres) mikroinstrukcji.
+Label   - Nazwa, żeby było łatwiej czytać (np. Fetch - czyli "pobierz następną instrukcję").
+ALU     - Co ma robić "kalkulator" w procesorze (ALU - Arithmetic Logic Unit). Np. ADD (dodaj), SUB (odejmij), S1 (przekaż pierwszą wartość dalej), S2 (przekaż drugą wartość dalej).
+S1, S2: Skąd ALU ma wziąć dane (źródła). Np. PC (licznik programu - wie, gdzie jest następna instrukcja), IR (rejestr instrukcji - trzyma obecną instrukcję), A, B, C (rejestry - takie podręczne notatniki dla danych), MDR (rejestr danych z pamięci), Const (jakaś stała liczba).
+Dest    - Gdzie zapisać wynik działania ALU. Np. znowu do PC, A, B, C, MAR (rejestr adresu pamięci - mówi, gdzie w pamięci szukać), MDR.
+ExtIR   - Jak "rozciągnąć" krótką liczbę z instrukcji (np. Word - na całe słowo).
+Const   - Konkretna liczba (stała), jeśli jest potrzebna (np. 4 w linijce 0001).
+JCond   - Warunek skoku. Czy procesor ma skoczyć do innej mikroinstrukcji? Np. True (zawsze skacz), Mbusy (skacz, jeśli pamięć jest zajęta), EQ (skacz, jeśli wynik był zero), NE (skacz, jeśli wynik nie był zero).
+Adr     - Gdzie skoczyć (do którego uAR), jeśli warunek JCond jest spełniony.
+Mem     - Co zrobić z pamięcią RAM? RW (czytaj), WW (pisz), RB (czytaj bajt), WB (pisz bajt), etc.
+MAdr    - Skąd wziąć adres dla operacji pamięci (np. z PC albo MAR).
+MDest   - Gdzie zapisać dane z pamięci (np. do IR, MDR) lub skąd wziąć dane do zapisu w pamięci (np. z MDR).
+Regs    - Które "notatniki" (rejestry A, B, C) są potrzebne dla obecnej instrukcji maszynowej. WF1, WF2, WF3 to prawdopodobnie sygnały mówiące "zapisz wynik do rejestru docelowego po wykonaniu operacji". RR to pewnie "odczytaj rejestry źródłowe".
+
+Jak to działa razem (Przykład: Pobranie instrukcji - Fetch):
+Mikroinstrukcja 0000 (etykieta Fetch):
+Mem=RW: Powiedz pamięci, żeby coś odczytała.
+MAdr=PC: Adres weź z licznika programu (PC).
+MDest=IR: Wynik odczytu (czyli instrukcję maszynową) zapisz do rejestru instrukcji (IR).
+JCond=Mbusy, Adr=Fetch: Jeśli pamięć jest zajęta (nie zdążyła odczytać w tym cyklu), to w następnym cyklu zrób znowu to samo (wróć do 0000).
+Jeśli pamięć nie jest zajęta, przejdź do następnej mikroinstrukcji (0001).
+Mikroinstrukcja 0001:
+ALU=ADD, S1=PC, S2=Const, Const=4, Dest=PC: Dodaj 4 do licznika programu (PC = PC + 4), żeby następnym razem pobrać kolejną instrukcję (zakładamy, że instrukcje mają 4 bajty).
+Regs=RR: Odczytaj rejestry podane w instrukcji, która jest teraz w IR.
+JCond=Jump1: Wykonaj "skok" (przejdź) do mikroinstrukcji odpowiedniej dla tej instrukcji, która jest w IR (to jest etap dekodowania). Np. jeśli w IR jest instrukcja ADD, to skoczy do mikroinstrukcji z etykietą ADD (0011).
+Każda instrukcja maszynowa (jak ADD, LD, ST, BSR) ma swoją sekwencję takich mikroinstrukcji, która ją realizuje krok po kroku.
