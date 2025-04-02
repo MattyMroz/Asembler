@@ -614,48 +614,68 @@ Wartość przesunięcia offset zależy od implementacji stosu: +4 lub +8
 
 
 
-        ADDI R0, 0x0FFC, R7 
-        ADDI R0, 6, R1      
-        PUSH R7, R1         
-        BSR  R7, fact       
-        PULL R7, R1         
-        NOP                 
+        ADDI R0, 0x0FFC, R7
+        ADDI R0, 6, r1
+        PUSH R7, R1
+        BSR  R7, fact
+        PULL R7, r1
+        NOP
 stop:
-        BRZ  R0, stop      
+        BRZ  R0, stop
 
 fact:
-        LDW  R2, 4(R7)     
-        ADDI R0, 1, R3     
-        SUB  R2, R3, R4     
-        BRZ  R4, base_case  
+        LDW  R2, 4(R7)
+        ADDI R0, 1, R3
+        SUB  R2, R3, R4
+        BRZ  R4, baseCase
 
-recursive_case:
-        PUSH R7, R2         
-        PUSH R7, R4         
-        BSR  R7, fact       
-        PULL R7, R3         
-        PULL R7, R2         
-        MUL  R2, R3, R2     
-        STW  R2, 4(R7)     
-        JMP  return         
+recursiveCase:
+        PUSH R7, R2
+        PUSH R7, R4
+        BSR  R7, fact
+        PULL R7, R3
+        PULL R7, R2
+        MUL  R2, R3, R2
+        STW  R2, 4(R7)
+        JMP  return
 
-base_case:
-        ADDI R0, 1, R2     
-        STW  R2, 4(R7)     
+baseCase:
+        ADDI R0, 1, R2
+        STW  R2, 4(R7)
 
 return:
-        RTS  R7             
-        NOP                 
+        RTS  R7
+        NOP
 
 
 
 
 
 
+BSR (Branch to Subroutine / Skok do podprogramu) - Mikroinstrukcje 003C-003F
+        003C: Oblicz adres SP - 4 na stosie i przygotuj go (w MAR) do zapisu adresu powrotu.
+        003D: Skopiuj adres następnej instrukcji (PC) do rejestru danych (MDR), aby przygotować go do zapisu na stosie.
+        003E: Oblicz nową wartość wskaźnika stosu (SP - 4), zapisz ją tymczasowo w C, i jednocześnie zapisz adres powrotu (z MDR) do pamięci na stosie (pod adres SP - 4), czekając jeśli pamięć jest zajęta.
+        003F: Oblicz adres docelowy podprogramu (z PC i instrukcji IR), wpisz go do PC (powodując skok), zaktualizuj rejestr SP (A) nową wartością (z C) i przejdź do pobrania pierwszej instrukcji podprogramu.
+
+RTS (Return from Subroutine / Powrót z podprogramu) - Mikroinstrukcje 0040-0042
+        0040: Skopiuj aktualny adres wskaźnika stosu (A) do rejestru adresu (MAR), aby wskazać miejsce odczytu adresu powrotu.
+        0041: Oblicz nową wartość wskaźnika stosu (SP + 4), zapisz ją tymczasowo w C, i jednocześnie odczytaj adres powrotu z pamięci (ze szczytu stosu wskazywanego przez MAR) do rejestru danych (MDR), czekając jeśli pamięć jest zajęta.
+        0042: Skopiuj odczytany adres powrotu (z MDR) do licznika programu (PC), aby wrócić do wywołującego, zaktualizuj rejestr SP (A) nową wartością (z C) i przejdź do pobrania instrukcji pod adresem powrotu.
 
 
 
+PUSH (Wepchnięcie na stos) - Mikroinstrukcje 0034-0037
+        0034: Skopiuj aktualny adres wskaźnika stosu (A) do rejestru adresu pamięci (MAR), aby wskazać miejsce zapisu (uwaga: logiczniej byłoby tu obliczyć A-4).
+        0035: Skopiuj dane do zapisania (z rejestru B) do rejestru danych pamięci (MDR).
+        0036: Zleć pamięci zapisanie danych (z MDR) pod adres wskazany przez MAR, czekając jeśli pamięć jest zajęta.
+        0037: Oblicz nowy adres wskaźnika stosu (A - 4), zapisz go tymczasowo w C, następnie zaktualizuj rejestr wskaźnika stosu (A) tą nową wartością (używając mechanizmu WF1) i skocz do sekwencji kończącej instrukcję (WF1, która prowadzi do Fetch).
 
+PULL (Ściągnięcie ze stosu) - Mikroinstrukcje 0038-003B
+        0038: Oblicz adres wskaźnika stosu po zdjęciu elementu (A + 4) i zapisz go tymczasowo w rejestrze C.
+        0039: Przygotuj aktualny adres wskaźnika stosu (A) w rejestrze adresu pamięci (MAR), aby wskazać, skąd czytać dane (uwaga: linijka w kodzie wydaje się błędna, powinno być S1 A, MAR).
+        003A: Zleć pamięci odczytanie danych spod adresu wskazanego przez MAR (szczyt stosu) do rejestru danych pamięci (MDR), czekając jeśli pamięć jest zajęta.
+        003B: Skopiuj odczytane dane (z MDR) do rejestru docelowego (C), następnie zaktualizuj rejestr wskaźnika stosu (A) nową wartością obliczoną wcześniej (używając mechanizmu WF1 i wartości z C) i skocz do sekwencji kończącej instrukcję (WF2, która prowadzi do Fetch).
 
 
 
